@@ -137,7 +137,7 @@ Trt_exit_summary <- amr_gene_summary[Group=="TrtExit"]
 
 distribution_type = 'negbinom_mu_data_simulation' # or 'negbinom_prob_data_simulation' or if empty variable it runs normal distribution
 sample_number_variable <- seq(12,96,by = 4) ## number of samples per simulated dataset, has to be divisible by 4
-simulation_runs <- 1
+simulation_runs <- 10
 effect_type <- 'variable_sd' ## can be 'drug_effect' and enriched_group, or 'fixed_sd' , 'trt_effect', or 'variable_sd'
 #effect_size <- as.numeric(2)
 
