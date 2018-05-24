@@ -1,0 +1,46 @@
+Notes:
+- Make sure single column results == matrix results
+
+Fixed inputs:
+- Bernoulli probability for NB (iseq proportion of zeros)
+- shape (size) parameter (need sensitivity analysis) [1, 10]
+
+
+Functions:
+generate_data_nbinom(p, k, num_samples, num_bootstrap=1000):
+    if samplesize <= empirical_samples:
+        randomly draw from empirical samples
+    else:
+        generate more from rnbinom
+        
+generate_data_zinbinom(z, p, k, num_samples, num_bootstrap=1000):
+    if samplesize <= empirical_samples:
+        randomly draw from empirical samples
+    else:
+        return_vector = []
+        for num_samples:
+            sample_value = 0
+            flip = runif(1, 0, 1)
+            if z > flip:
+                sample_value = rnbinom(1, p, k)
+            return_vector += sample_value
+            
+
+simulation(p, k, effect_size, num_bootsrap):
+    significant = False
+    num_samples = 3   # per group
+    while not significant:
+        control_matrix = generate_data(p, k, num_samples, num_bootstrap)
+        trt_matrix = effect_size * control_matrix
+        data_matrix = rbind(control_matrix, trt_matrix)
+        for column in data_matrix:
+            fitzig(column)
+
+
+Outer loop:
+for starting value:  # data agnostic, optional
+    for p in 0.01:1:
+        # doparallel:
+        for effect size in 0.1:stop:
+            for k in 1:10:  # for shape parameter sensitivity
+    
