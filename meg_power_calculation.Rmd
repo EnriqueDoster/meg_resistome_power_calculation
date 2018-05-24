@@ -1,0 +1,137 @@
+---
+title: "NCBA2 Resistome Power Simulations: Shotgun Metagenomic Data Results"
+author: "Enrique Doster and Steven Lakin"
+date: "May 23, 2018"
+output: 
+  html_document: 
+    theme: readable
+---
+
+```{r setup, include=FALSE, cache=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(metagenomeSeq)
+library(data.table)
+library(ggplot2)
+library(vegan)
+library(RCurl)
+library(kableExtra)
+set.seed(154)
+
+## Publicly hosted scripts with helper functions
+eval(parse(text=getURL("https://raw.githubusercontent.com/EnriqueDoster/meg_resistome_power_calculation/master/scripts/data_simulation_functions.R", ssl.verifypeer=FALSE)))
+eval(parse(text=getURL("https://raw.githubusercontent.com/EnriqueDoster/meg_resistome_power_calculation/master/scripts/meg_utility_functions.R", ssl.verifypeer=FALSE)))
+
+## Data
+amr <- newMRexperiment(read.table(text=getURL("https://raw.githubusercontent.com/EnriqueDoster/meg_resistome_power_calculation/master/NCBA2_AMR_analytic_matrix.csv"), header=TRUE, row.names=1, sep=","))
+
+metadata <- read.csv(text=getURL("https://raw.githubusercontent.com/EnriqueDoster/meg_resistome_power_calculation/master/NCBA2_metadata.csv"), header=TRUE)
+metadata[, "ID"] <- make.names(metadata[, "ID"])
+
+annotations <- data.table(read.csv(text=getURL("https://raw.githubusercontent.com/EnriqueDoster/meg_resistome_power_calculation/master/megaresbio_annotations_v1.01.csv"), header=TRUE))
+setkey(annotations, header)
+
+mech_annotations <- annotations[, .SD, .SDcols=c("class", "mechanism")]
+mech_annotations <- unique(mech_annotations, by=c("class", "mechanism"))
+colnames(mech_annotations) <- c("Class", "Mechanism")
+setkey(mech_annotations, Mechanism)
+
+cumNorm(amr)
+amr_norm <- data.table(MRcounts(amr, norm=TRUE))
+
+amr_norm[, header :=( rownames(amr) )]
+setkey(amr_norm, header)
+amr_norm <- annotations[amr_norm]
+
+amr_mech <- amr_norm[, lapply(.SD, sum), by='mechanism', .SDcols=!c('header', 'class', 'group')]
+amr_mech_analytic <- newMRexperiment(counts=amr_mech[, .SD, .SDcols=!'mechanism'])
+rownames(amr_mech_analytic) <- amr_mech$mechanism
+
+
+metadata <- data.table(metadata[match(colnames(MRcounts(amr_mech_analytic)), metadata[, "ID"]), ])
+setkey(metadata, ID)
+
+amr_melted_mech_analytic <- melt_dt(MRcounts(amr_mech_analytic), 'Mechanism')
+
+colnames(amr_melted_mech_analytic)[2] <- "Mechanism"
+setkey(amr_melted_mech_analytic, Mechanism)
+
+amr_melted_mech_analytic <- mech_annotations[amr_melted_mech_analytic]
+
+amr_melted_mech_analytic[, header:=NULL]
+amr_melted_mech_analytic[, group:=NULL]
+
+setkey(amr_melted_mech_analytic, ID)
+
+simul_data <- metadata[amr_melted_mech_analytic]
+simul_data[, Group :=( paste0(Treatment, Time) )]
+simul_data[, Round_count :=( round(Normalized_Count) )]
+simul_data[, Treatment := NULL]
+simul_data[, Time := NULL]
+simul_data[, Level_ID := NULL]
+setkey(simul_data, ID)
+
+data_summary <- simul_data[,
+.(
+  median=median(Round_count),
+  mean=mean(Round_count),
+  sd=sd(Round_count),
+  success=sum(Round_count > 0),
+  prob=sum(Round_count == 0) / .N
+), by=.(Mechanism, Group, Class)]
+
+exit_simul_data <- simul_data[Group == "CtrlExit"]
+exit_simul_data[, Normalized_Count := NULL]
+exit_simul_data[, Group := NULL]
+```
+
+
+## Experiment 1: Sensitivity of Initial Value on Effect Size and Standard Deviation
+
+**Experimental aim: to determine the effect of non-negative initialization value on the significance boundary of simultaneously varying effect size and standard deviation.**
+
+### In Silico Methods
+
+### Simulation Results
+
+
+## Experiment 2: Empirical Effect Size and Standard Deviation by Univariate Feature
+
+**Experimental aim: to determine the significance boundary as a function of simultaneously varying effect size and standard deviation for each univariate feature as seen empirically.**
+
+### Dataset Description
+
+Describe the dataset here including a table of the variables to be used and their summary statistics.
+
+```{r table_data, echo=FALSE, results="asis"}
+cat_table_dat <- data.table(
+  Feature=c("ID", "Class", "Mechanism"),
+  Description=c("Sample names",
+                "Antimicrobial resistance drug class",
+                "Antimicrobial resistance biological mechanism"),
+  DataType=c("Categorical", "Categorical","Categorical"),
+  LevelNumber=c(
+    length(unique(exit_simul_data[["ID"]])),
+    length(unique(exit_simul_data[["Class"]])),
+    length(unique(exit_simul_data[["Mechanism"]]))
+  )
+)
+
+real_table_dat <- data.table(
+  SummaryStat=names(summary(exit_simul_data[["Round_count"]])),
+  Value=round(as.numeric(summary(exit_simul_data[["Round_count"]])), 1)
+)
+
+knitr::kable(cat_table_dat, caption="Categorical data features.") %>% kable_styling(full_width=FALSE)
+
+knitr::kable(real_table_dat, caption="Summary statistics for the Round_count data feature") %>% kable_styling(full_width=FALSE)
+```
+
+### In Silico Methods
+
+### Simulation Results
+
+
+
+
+
+
